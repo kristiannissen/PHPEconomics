@@ -4,30 +4,43 @@
  * @version: 0.4
  */
 class EconomicsWS {
-  // Economics SOAP
-  const WSDL = 'https://www.e-conomic.com/secure/api1/EconomicWebservice.asmx?WSDL';
-  const ADMINAGREEMENTNO = '';
-  const ADMINUSERID = '';
-  const ADMINUSERPASSWORD = '';
-  const CLIENTAGREEMENTNO = '';
   // Soap client
   private $client;
+  // Debug access
+  private $access_granted;
   
   function __construct() {    
     try {
-      $this->client = new SoapClient(EconomicsWS::WSDL, array("trace" => 1, "exceptions" => 1));    
-      $this->client->ConnectAsAdministrator(array(
-		    'adminAgreementNo' => intval(EconomicsWS::ADMINAGREEMENTNO), 
-		    'adminUserID' => EconomicsWS::ADMINUSERID,
-		    'adminUserPassword' => EconomicsWS::ADMINUSERPASSWORD,
-		    'clientAgreementNo' => intval(EconomicsWS::CLIENTAGREEMENTNO)
-		  ));
+      $settings = parse_ini_file(realpath(dirname(__FILE__) .'/economics.ini'));
+
+      if (is_array($settings) && count($settings) > 0) {
+        $this->client = new SoapClient($settings['wsdl_endpoint'], array("trace" => 1, "exceptions" => 1));
+        
+        $this->client->Connect(array(
+		      'agreementNumber' => $settings['agreement_number'],
+		      'userName' => $settings['user_name'],
+		      'password' => $settings['password']
+		    ));
+		    
+		    $this->access_granted = true;
+      } else {
+        die('INI file could not be found');
+      }      
+		  
     } catch (Exception $e) {
       syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
+
+		  $this->access_granted = false;      
     }
   }
   function disconnect() {
-    $this->client->Disconnect();  
+    $this->client->Disconnect();
+  }
+  /**
+   * @return boolean
+   */
+  function test_access_credentials () {
+    return $this->access_granted;
   }
   /**
    * @param mixed $params
@@ -371,19 +384,24 @@ class EconomicsWS {
   /**
    * @return mixed
    */
-  function get_employees() {
+  function get_employees () {
+    $employees = array();
+    
     try {
-      $employee_handle = $this->client->Employee_GetAll()->Employee_GetAllResult->EmployeeHandle;
-
-      $employees = $this->client->Employee_GetDataArray(array(
-        'entityHandles' => $employee_handle
-      ))->Employee_GetDataArrayResult->EmployeeData;
+      $employees = $this->client->Employee_GetAll()->Employee_GetAllResult->EmployeeHandle;
+      
     } catch (Exception $e) {
-      syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
+      syslog(LOG_DEBUG, 'get_employees(): exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
     }
     
     return $employees;
   }
+  /**
+   * @return mixed
+   */
+  function get_employee_by_number ($number) {
+     
+  }  
   /**
    * @return mixed
    */
