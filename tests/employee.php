@@ -16,15 +16,11 @@ class AccessTest extends PHPUnit_Framework_TestCase {
     unset($this->econ);
   }
   
-  public function testAccessCredentials () {
-    $this->assertTrue($this->econ->test_access_credentials());
-  }
-  
   public function testGetEmployees () {
     $this->assertTrue($this->econ->get_employees() > 0);
   }
   
   public function testCreateEmployee () {
-    $this->assertTrue($this->econ->create_employee(array()));
+    $this->assertTrue(is_object($this->econ->create_employee(array())));
   }
 }

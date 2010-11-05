@@ -28,9 +28,8 @@ class EconomicsWS {
       }      
 		  
     } catch (Exception $e) {
-      syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
-
-		  $this->access_granted = false;      
+      $this->access_granted = false;
+      $this->log_error($e);
     }
   }
   function disconnect() {
@@ -255,10 +254,20 @@ class EconomicsWS {
     return $this->client->ProductGroup_GetAll()->ProductGroup_GetAllResult;
   }
   /**
-   * @return mixed
+   * Returns all products
+   * @return array
    */
-  function get_products() {
-    return $this->client->Product_GetAll()->Product_GetAllResult->ProductHandle;
+  function get_products () {
+    $products = null;
+    
+    try {
+      $product_handle = $this->client->Product_GetAll()->Product_GetAllResult->ProductHandle;
+      
+    } catch (Exception $e) {
+      $this->log_error($e);
+    }
+    
+    return $products;
   }
   /**
    * @params int debitor id
@@ -371,36 +380,107 @@ class EconomicsWS {
    */
   function get_templates() {
     $templates = $this->client->TemplateCollection_GetAll()->TemplateCollection_GetAllResult->TemplateCollectionHandle;
+    
     return $this->client->TemplateCollection_GetDataArray(array(
       'entityHandles' => $templates
     ))->TemplateCollection_GetDataArrayResult->TemplateCollectionData;
   }
   /**
-   * @return mixed
+   * Returns debtor data objects for a given set of debtors.
+   * @category debtor
+   * @return array
    */
-  function get_debitors() {
-    return $this->client->Debtor_GetAll()->Debtor_GetAllResult->DebtorHandle;
+  function get_debtors () {
+    $debtors = null;
+    
+    try {
+      $debtor_handle = $this->client->Debtor_GetAll()->Debtor_GetAllResult->DebtorHandle;
+      
+      if (is_array($debtor_handle) && count($debtor_handle) > 0) {
+        // Debtor_GetDataArray
+        $debtors = $this->client->Debtor_GetDataArray(array(
+          'entityHandles' => $debtor_handle
+        ))->Debtor_GetDataArrayResult->DebtorData;
+      }
+    } catch (Exception $e) {      
+      $this->log_exception($e);
+    }
+    
+    return $debtors;
+  }
+  
+  protected function log_exception ($e) {
+    syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());      
+    
+    die($e->getMessage());
   }
   /**
+   * @todo error handling
+   * @category employee
    * @return mixed
    */
   function get_employees () {
     $employees = array();
     
     try {
-      $employees = $this->client->Employee_GetAll()->Employee_GetAllResult->EmployeeHandle;
+      $employee_handle = $this->client->Employee_GetAll()->Employee_GetAllResult->EmployeeHandle;
+      
+      if (is_array($employee_handle) && count($employee_handle) > 0) {
+        foreach ($employee_handle as $eh) {
+          $employee_data = $this->client->Employee_GetData(array(
+            'entityHandle' => $eh
+          ));
+          
+          array_push($employees, $employee_data->Employee_GetDataResult);
+        }
+      } else {
+        $employee_data = $this->client->Employee_GetData(array(
+          'entityHandle' => $eh
+        ));
+          
+        array_push($employees, $employee_data);
+      }
       
     } catch (Exception $e) {
-      syslog(LOG_DEBUG, 'get_employees(): exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
+      syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
     }
     
     return $employees;
   }
   /**
-   * @return mixed
+   * @return boolean
    */
-  function get_employee_by_number ($number) {
-     
+  function create_employee ($params) {
+    $employee = null;
+    
+    try {
+      $employee_group_handle = $this->client->EmployeeGroup_GetAll()->EmployeeGroup_GetAllResult->EmployeeGroupHandle;
+      // Find all employees
+      $employees = $this->get_employees();
+      // Find next available
+      $number = array_pop($employees);
+      
+      if (is_object($number)) {
+        $number = intval($number->Number) + 1;
+      } else {
+        $number = 1;
+      }
+      
+      // Create the employee
+      $this->client->Employee_Create(array(
+        'number' => $number,
+        'groupHandle' => $employee_group_handle,
+        'name' => 'Homer J. Simpson'
+      ));
+      
+      // Find the employee based on number
+      $employee = $this->client->Employee_FindByNumber(array('number' => $number));
+      
+    } catch (Exception $e) {
+      die($e->getMessage());
+    }
+    
+    return $employee;
   }  
   /**
    * @return mixed
@@ -422,20 +502,34 @@ class EconomicsWS {
     return $current_invoices;
   }
   /**
-   * @return object
+   * Return debtor data object found by number
+   *
+   * @category debtor   
+   * @param mixed $params
+   * @return mixed
    */
-  function get_debitor($params) {
+  function get_debtor ( array $params ) {
+    $debtor_data = null;
+    
+    if (!isset($params['number']) || !is_int($params['number'])) {
+      die('get_debtor ( array $params ) params does not contain debtor number');
+    }
+
     try {
       $debtor = $this->client->Debtor_FindByNumber(array(
-        'number' => $params['debitor_number']
-      ))->Debtor_FindByNumberResult;
+        'number' => intval($params['number'])
+      ));
       
-      $debtor_data = $this->client->Debtor_GetData(array(
-        'entityHandle' => $debtor
-      ))->Debtor_GetDataResult->Handle;
+      if (is_object($debtor) && property_exists($debtor, 'Debtor_FindByNumberResult')) {
+        $debtor_data = $this->client->Debtor_GetData(array(
+          'entityHandle' => $debtor->Debtor_FindByNumberResult
+        ))->Debtor_GetDataResult->Handle;
+      } else {
+        die('get_debtor ( array $params ) returned an error, params number may be invalid or not in the database');
+      }
+      
     } catch (Exception $e) {
-      syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
-      $debtor_data = (object)array();
+      $this->log_exception($e);
     }
     
     return $debtor_data;
