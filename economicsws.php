@@ -3,6 +3,7 @@
  * @author: Kristian Nissen
  * @version: 0.4
  */
+
 class EconomicsWS {
   // Soap client
   private $client;
@@ -24,12 +25,15 @@ class EconomicsWS {
 		    
 		    $this->access_granted = true;
       } else {
-        die('INI file could not be found');
+				$this->access_granted = false;
+	
+        throw new Exception('INI file could not be found');
       }      
 		  
     } catch (Exception $e) {
       $this->access_granted = false;
-      $this->log_error($e);
+			
+			throw new Exception("Access not granted!");
     }
   }
   function disconnect() {
@@ -264,7 +268,7 @@ class EconomicsWS {
       $product_handle = $this->client->Product_GetAll()->Product_GetAllResult->ProductHandle;
       
     } catch (Exception $e) {
-      $this->log_error($e);
+      throw new Exception($e);
     }
     
     return $products;
@@ -386,35 +390,6 @@ class EconomicsWS {
     ))->TemplateCollection_GetDataArrayResult->TemplateCollectionData;
   }
   /**
-   * Returns debtor data objects for a given set of debtors.
-   * @category debtor
-   * @return array
-   */
-  function get_debtors () {
-    $debtors = null;
-    
-    try {
-      $debtor_handle = $this->client->Debtor_GetAll()->Debtor_GetAllResult->DebtorHandle;
-      
-      if (is_array($debtor_handle) && count($debtor_handle) > 0) {
-        // Debtor_GetDataArray
-        $debtors = $this->client->Debtor_GetDataArray(array(
-          'entityHandles' => $debtor_handle
-        ))->Debtor_GetDataArrayResult->DebtorData;
-      }
-    } catch (Exception $e) {      
-      $this->log_exception($e);
-    }
-    
-    return $debtors;
-  }
-  
-  protected function log_exception ($e) {
-    syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());      
-    
-    die($e->getMessage());
-  }
-  /**
    * @todo error handling
    * @category employee
    * @return mixed
@@ -501,8 +476,30 @@ class EconomicsWS {
     
     return $current_invoices;
   }
+	/**
+   * Returns debtor numbers. Each number can be used to fetch full data handle
+   * @category debtor
+   * @return array
+   */
+  function get_debtors () {
+    $debtors = null;
+    
+    try {
+      $debtor_handle = $this->client->Debtor_GetAll()->Debtor_GetAllResult->DebtorHandle;
+
+      if (is_array($debtor_handle) && count($debtor_handle) > 0) {
+        $debtors = $this->client->Debtor_GetDataArray(array(
+          'entityHandles' => $debtor_handle
+        ))->Debtor_GetDataArrayResult->DebtorData;
+      }
+    } catch (Exception $e) {      
+      throw new Exception('List of debtors could not be fetched! '. $e->getMessage());
+    }
+    
+    return $debtors;
+  }
   /**
-   * Return debtor data object found by number
+   * Returns a debtor data object for a given debtor.
    *
    * @category debtor   
    * @param mixed $params
@@ -512,7 +509,7 @@ class EconomicsWS {
     $debtor_data = null;
     
     if (!isset($params['number']) || !is_int($params['number'])) {
-      die('get_debtor ( array $params ) params does not contain debtor number');
+      throw new Exception('The $params has to contain a number. Example $params ("number" => 007)');
     }
 
     try {
@@ -523,35 +520,58 @@ class EconomicsWS {
       if (is_object($debtor) && property_exists($debtor, 'Debtor_FindByNumberResult')) {
         $debtor_data = $this->client->Debtor_GetData(array(
           'entityHandle' => $debtor->Debtor_FindByNumberResult
-        ))->Debtor_GetDataResult->Handle;
+        ))->Debtor_GetDataResult;
       } else {
-        die('get_debtor ( array $params ) returned an error, params number may be invalid or not in the database');
+        throw new Exception('The debtor number could not be found');
       }
       
     } catch (Exception $e) {
-      $this->log_exception($e);
+			// We didn't forsee this, but it wasn't unexpected
+      throw new Exception('A less expected error occured :) '. $e->getMessage());
     }
     
     return $debtor_data;
   }
   /**
+	 * Returns invoice data for a given debtor
+	 * 
+	 * @category debtor
+	 * @param mixed $params
    * @return mixed
    */
-  function get_debitor_invoices($params) {
+  function get_debtor_invoices ( array $params ) {
+		$invoices = null;
+		
+		if (!isset($params['number']) || !is_int($params['number'])) {
+			throw new Exception('The $params has to contain a number. Example $params ("number" => 007)');
+		}
+		
     try {
-      $debtor = $this->client->Debtor_FindByNumber(array(
-        'number' => $params['debitor_number']
-      ))->Debtor_FindByNumberResult;
-      
-      $invoices = $this->client->Debtor_GetInvoices(array(
-        'debtorHandle' => $debtor
-      ))->Debtor_GetInvoicesResult->InvoiceHandle;
+      $debtor = $this->get_debtor($params);
 
+			if (is_object($debtor) && property_exists($debtor, 'Handle')) {
+				$invoice_handles = $this->client->Debtor_GetInvoices(array(
+	        'debtorHandle' => $debtor
+	      ))->Debtor_GetInvoicesResult;
+
+				if (is_object($invoice_handles) && property_exists($invoice_handles, 'InvoiceHandle')) {
+					$invoice_data = $this->client->Invoice_GetDataArray(array(
+						'entityHandles' => $invoice_handles
+					));
+					
+					if (is_object($invoice_data) && property_exists($invoice_data, 'Invoice_GetDataArrayResult')) {
+						$invoices = $invoice_data->Invoice_GetDataArrayResult->InvoiceData;
+					}
+				} else {
+					throw new Exception('No invoice data was found');
+				}
+			} else {
+				throw new Exception('No invoices were found');
+			}
     } catch (Exception $e) {
-      syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
-      $invoices = array();
+      throw new Exception('Invoice for debtor could not be returned! '. $e->getMessage());
     }
-    
+
     return $invoices;
   }
 }
