@@ -191,63 +191,53 @@ class EconomicsWS {
     return true;
   }
   /**
+	 * See https://www.e-conomic.com/secure/api1/EconomicWebservice.asmx?op=CurrentInvoiceLine_Create
    * @param mixed $params
    * @return boolean
    */
-  function add_order_to_invoice($params) {
-    try {
-      $debtor_current_invoices = $this->client->Debtor_GetCurrentInvoices(array(
-        'debtorHandle' => (object)array(
-          'Number' => $params['debitor_number']
-        )
-      ))->Debtor_GetCurrentInvoicesResult->CurrentInvoiceHandle;
+  function add_order_to_invoice (array $params) {
+    var_dump($params);
 
-      if(gettype($debtor_current_invoices) == 'array'){
-        $current_invoice = array_shift($debtor_current_invoices);
-      } else if(gettype($debtor_current_invoices) == 'object'){
-        $current_invoice = $debtor_current_invoices;
-      } else {
-        $current_invoice = $this->client->CurrentInvoice_Create(array(
-          'debtorHandle' => (object)array(
-            'Number' => $params['debitor_number']
-          ) 
-        ))->CurrentInvoice_CreateResult;
-      }
-
-      $invoiceline_handle = $this->client->CurrentInvoiceLine_Create(array(
-        'invoiceHandle' => $current_invoice
-      ))->CurrentInvoiceLine_CreateResult;
-
-      $product_handle = $this->client->Product_FindByNumber(array(
-        'number' => $params['product_number']
-      ))->Product_FindByNumberResult;
-      
-      $product_data_handle = $this->client->Product_GetData(array(
-        'entityHandle' => $product_handle
-      ))->Product_GetDataResult;
-      
-      $current_invoiceline_handle = $this->client->CurrentInvoiceLine_CreateFromData(array(
-        'data' => array(
-          'Handle' => $invoiceline_handle,
-          'Id' => $current_invoice->Id,
-          'Number' => $invoiceline_handle->Number,
-          'InvoiceHandle' => $current_invoice,
-          'Description' => empty($params['product_description']) ? $product_data_handle->Name : $params['product_description'],
-          'DeliveryDate' => NULL,
-          'ProductHandle' => $product_handle,
-          'Quantity' => floatval($params['product_quantity']),
-          'UnitNetPrice' => $product_data_handle->SalesPrice,
-          'DiscountAsPercent' => floatval($params['product_discount']),          
-          'UnitCostPrice' => 0.0,
-          'TotalNetAmount' => (floatval($product_data_handle->SalesPrice) * floatval($params['product_quantity'])),
-          'TotalMargin' => 0.0,
-          'MarginAsPercent' => 0.0
-        )
-      ))->CurrentInvoiceLine_CreateFromDataResult;
-      
+		try {
+			// Invoice id can be null
+			if (!$params['invoice_id']) {
+				// We have no current invoice
+				
+			} else {
+				// We have a current invoice
+				$current_invoice_data = $this->client->CurrentInvoice_GetData(array(
+					'entityHandle' => (object) array(
+						'Id' => $params['invoice_id']
+					)
+				))->CurrentInvoice_GetDataResult;
+			}
+			
+			if (is_object($current_invoice_data)) {
+				$new_invoice_line = $this->client->CurrentInvoiceLine_Create(array(
+					'invoiceHandle' => $current_invoice_data->Handle
+				))->CurrentInvoiceLine_CreateResult;
+				
+				$product_handle = $this->client->Product_FindByNumber(array(
+	        'number' => $params['product_id']
+	      ))->Product_FindByNumberResult;
+	
+				$this->client->CurrentInvoiceLine_SetProduct(array(
+					'currentInvoiceLineHandle' => $new_invoice_line,
+					'valueHandle' => $product_handle
+				));
+				
+				$this->client->CurrentInvoiceLine_SetQuantity(array(
+					'currentInvoiceLineHandle' => $new_invoice_line,
+					'value' => $params['quantity']
+				));
+				
+				$this->client->CurrentInvoiceLine_SetUnitNetPrice(array(
+					'currentInvoiceLineHandle' => $new_invoice_line,
+					'value' => $params['price']
+				));
+			}
     } catch (Exception $e) {
-      syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
-      return false;
+      throw new Exception('Error when adding product to invoice! '. $e->getMessage());
     }
     return true;
   }
@@ -259,18 +249,31 @@ class EconomicsWS {
   }
   /**
    * Returns all products
+ 	 * See https://www.e-conomic.com/secure/api1/EconomicWebservice.asmx?op=Product_GetDataArray
+	 * See https://www.e-conomic.com/secure/api1/EconomicWebservice.asmx?op=Product_GetAll
    * @return array
    */
   function get_products () {
-    $products = null;
+    $products = array();
     
     try {
-      $product_handle = $this->client->Product_GetAll()->Product_GetAllResult->ProductHandle;
-      
-    } catch (Exception $e) {
-      throw new Exception($e);
-    }
-    
+			$product_result = $this->client->Product_GetAll()->Product_GetAllResult;
+			
+			if (is_object($product_result) && property_exists($product_result, 'ProductHandle')) {
+				$product_handle = $this->client->Product_GetDataArray(array(
+					'entityHandles' => $product_result->ProductHandle
+				))->Product_GetDataArrayResult;
+				
+				if (is_object($product_handle) && property_exists($product_handle, 'ProductData')) {
+					$products = $product_handle->ProductData;
+				} else {
+					throw new Exception('No Product data available '. $e->getMessage());
+				}
+			}
+		} catch (Exception $e) {
+			throw new Exception('Products could not be returned '. $e->getMessage());
+		}
+
     return $products;
   }
   /**
@@ -458,20 +461,41 @@ class EconomicsWS {
     return $employee;
   }  
   /**
-   * @return mixed
+	 * @category debtor
+	 * @param array $params
+   * @return array
    */
-  function get_debitor_current_invoices($params) {
-    try {
+  function get_debtor_current_invoices (array $params) {
+    $current_invoices = array();
+
+		if (!is_array($params) || !isset($params['number'])) {
+			throw new Exception('Debtor number not passed');
+		}
+		
+		try {
       $debtor = $this->client->Debtor_FindByNumber(array(
-	      'number' => $params['debitor_number']
-	    ))->Debtor_FindByNumberResult;
-	    
-      $current_invoices = $this->client->Debtor_GetCurrentInvoices(array(
-        'debtorHandle' => $debtor
-      ))->Debtor_GetCurrentInvoicesResult->CurrentInvoiceHandle;
+	      'number' => $params['number']
+	    ));
+
+			if (is_object($debtor) && property_exists($debtor, 'Debtor_FindByNumberResult')) {
+				$current_invoices_result = $this->client->Debtor_GetCurrentInvoices(array(
+					'debtorHandle' => $debtor->Debtor_FindByNumberResult
+				));
+				
+				if (is_object($current_invoices_result) && property_exists($current_invoices_result, 'Debtor_GetCurrentInvoicesResult')) {
+					$current_invoice_handle = $current_invoices_result->Debtor_GetCurrentInvoicesResult;
+					
+					if (is_object($current_invoice_handle) && property_exists($current_invoice_handle, 'CurrentInvoiceHandle')) {
+						$current_invoices = $current_invoices_result->Debtor_GetCurrentInvoicesResult->CurrentInvoiceHandle;
+					} else {
+						throw new Exception('No current invoices found');
+					}
+				}
+			} else {
+				throw new Exception('Debtor not found');
+			}
     } catch (Exception $e) {
-      syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
-      $current_invoices = array();
+      throw new Exception('Error when trying to get debtor current invoices '. $e->getMessage());
     }
     
     return $current_invoices;
@@ -482,7 +506,7 @@ class EconomicsWS {
    * @return array
    */
   function get_debtors () {
-    $debtors = null;
+    $debtors = array();
     
     try {
       $debtor_handle = $this->client->Debtor_GetAll()->Debtor_GetAllResult->DebtorHandle;

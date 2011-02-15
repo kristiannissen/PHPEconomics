@@ -54,4 +54,17 @@ class TestDebtor extends UnitTestCase {
 		// Test that we have a valid response
 		$this->assertTrue(gettype($invoices) == 'array');
 	}
+	/*
+	 * get_debtor_current_invoices
+	 */
+	function testGetDebtorCurrentInvoices () {
+		// Fetch any debtor
+		$debtor = array_shift($this->ew->get_debtors());
+		// Fetch current invoices
+		$invoices = $this->ew->get_debtor_current_invoices(array(
+			'number' => intval($debtor->Handle->Number)
+		));
+		// Test if the return type is correct
+		$this->assertTrue(is_array($invoices));
+	}
 }
