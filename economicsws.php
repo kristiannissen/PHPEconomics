@@ -196,11 +196,27 @@ class EconomicsWS {
    * @return boolean
    */
   function add_order_to_invoice (array $params) {
-    try {
+    var_dump($params);
+
+		try {
 			// Invoice id can be null
 			if (!$params['invoice_id']) {
 				// We have no current invoice
+				$debtor_handle = $this->get_debtor(array(
+					'number' => $params['debtor_number'])
+				);
 				
+				$current_invoice_handle = $this->client->CurrentInvoice_Create(array(
+					'debtorHandle' => $debtor_handle
+				))->CurrentInvoice_CreateResult;
+				
+				if (is_object($current_invoice_handle) && property_exists($current_invoice_handle, 'Id')) {
+					$current_invoice_data = $this->client->CurrentInvoice_GetData(array(
+						'entityHandle' => $current_invoice_handle
+					))->CurrentInvoice_GetDataResult;
+				} else {
+					throw new Exception('Could not create new invoice');
+				}
 			} else {
 				// We have a current invoice
 				$current_invoice_data = $this->client->CurrentInvoice_GetData(array(
@@ -210,7 +226,7 @@ class EconomicsWS {
 				))->CurrentInvoice_GetDataResult;
 			}
 			
-			if (is_object($current_invoice_data)) {
+			if (is_object($current_invoice_data) && property_exists($current_invoice_data, 'Handle')) {
 				$new_invoice_line = $this->client->CurrentInvoiceLine_Create(array(
 					'invoiceHandle' => $current_invoice_data->Handle
 				))->CurrentInvoiceLine_CreateResult;
