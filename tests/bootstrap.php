@@ -4,6 +4,7 @@
  * we will include this in all our tests
  * it bootstraps the test suite
  */
+ini_set('error_reporting', E_ALL);
 
 $path_to_simpletest = realpath(dirname(dirname(dirname(__FILE__))));
 
