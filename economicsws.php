@@ -4,8 +4,6 @@
  * @version: 0.4
  */
 
-require_once realpath(join(PATH_SEPARATOR, array(dirname(__FILE__), 'economicsexception.php'))));
-
 class EconomicsWS {
   // Soap client
   private $client;
@@ -198,9 +196,7 @@ class EconomicsWS {
    * @return boolean
    */
   function add_order_to_invoice (array $params) {
-    var_dump($params);
-
-		try {
+    try {
 			// Invoice id can be null
 			if (!$params['invoice_id']) {
 				// We have no current invoice
