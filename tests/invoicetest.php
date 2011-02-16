@@ -25,7 +25,7 @@ class TestInvoice extends UnitTestCase {
 			'debtor_number' => intval($debtor->Handle->Number),
 			'product_id' => intval($product->Handle->Number),
 			'quantity' => '10',
-			'invoice_id' => null,
+			'invoice_id' => "",
 			'price' => '12499.00'
 		)));
 	}

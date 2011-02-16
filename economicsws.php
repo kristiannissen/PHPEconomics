@@ -46,11 +46,12 @@ class EconomicsWS {
     return $this->access_granted;
   }
   /**
+	 * @category debtor
    * @param mixed $params
    * @param string [$vat_zone]
    * @return int
    */
-  function create_debitor($params, $vat_zone = 'HomeCountry') {
+  function create_debitor ($params, $vat_zone = 'HomeCountry') {
     try {
 	    $debtor = $this->client->Debtor_FindByName(array(
 	      'name' => $params['debitor_name']
@@ -124,17 +125,17 @@ class EconomicsWS {
 	      $number = 0;
 	    }
 	  } catch (Exception $e) {
-      syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
-      return 0;
+      throw new Excetion('Could not create new debtor '. $e->getMessage());
 	  }
 
 	  return intval($number);
   }
   /**
+	 * @category debtor
    * @param mixed $params
    * @return boolean
    */
-  function update_debitor($params, $vat_zone = 'HomeCountry') {
+  function update_debitor ($params, $vat_zone = 'HomeCountry') {
     try {
       $debtor = $this->client->Debtor_FindByNumber(array(
         'number' => $params['debitor_number']
@@ -182,10 +183,8 @@ class EconomicsWS {
           'valueHandle' => $params['debitor_ean']
         ));      
       }
-	    
     } catch (Exception $e) {
-      syslog(LOG_DEBUG, ' SOAP response '. $this->client->__getLastResponse());
-      return false;
+      throw new Exception('Could not update debtor '. $e->getMessage());
     }
     
     return true;
@@ -196,11 +195,9 @@ class EconomicsWS {
    * @return boolean
    */
   function add_order_to_invoice (array $params) {
-    var_dump($params);
-
-		try {
+    try {
 			// Invoice id can be null
-			if (!$params['invoice_id']) {
+			if (is_string($params['invoice_id']) || isset($params['invoice_id'])) {
 				// We have no current invoice
 				$debtor_handle = $this->get_debtor(array(
 					'number' => $params['debtor_number'])
@@ -291,62 +288,7 @@ class EconomicsWS {
     return $products;
   }
   /**
-   * @params int debitor id
-   * @return boolean
-   */
-  function add_subscriber($params) {
-    try {
-      $subscriber_handle = $this->client->Subscriber_Create(array(
-        'debtorHandle' => (object)array(
-          'Number' => $params['debitor_number']
-        ),
-        'startDate' => $params['start_date'],
-        'endDate' => $params['end_date'],
-        'registeredDate' => date('Y-m-d'). 'T00:00:00',
-        'subscriptionHandle' => (object)array(
-          'Id' => intval($params['subscription_id'])
-        )
-      ))->Subscriber_CreateResult;
-    } catch (Exception $e) {
-      syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
-      return false;
-    }
-    
-    return true;
-  }
-  /**
-   * @params mixed
-   * @return boolean
-   */
-  function expire_subscriber($params) {
-    try {                  
-      $this->client->Subscriber_SetExpiryDate(array(
-        'subscriberHandle' => (object) array(
-          'SubscriberId' => $params['subscriber_id']
-        ),
-        'value' => $params['expire_date']
-      ));
-      
-    } catch (Exception $e) {
-      //syslog(LOG_DEBUG, ' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
-      return false;
-    }
-    
-    return true;
-  }
-  /**
-   * @return mixed
-   */
-  function get_subscribers() {
-    return $this->client->Subscriber_GetAll()->Subscriber_GetAllResult->SubscriberHandle;
-  }
-  /**
-   * @return mixed
-   */
-  function get_subscriptions() {
-    return $this->client->Subscription_GetAll()->Subscription_GetAllResult->SubscriptionHandle;
-  }
-  /**
+   * @category invoice
    * @param string debitor number
    * @return boolean
    */
@@ -375,8 +317,7 @@ class EconomicsWS {
       }
       
     } catch (Exception $e) {
-      syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
-      return false;
+      throw new Exception('Could not download invoice '. $e->getMessage());
     }
     
     return $invoice;
@@ -388,6 +329,7 @@ class EconomicsWS {
     return $this->client->Currency_GetAll()->Currency_GetAllResult->CurrencyHandle;
   }
   /**
+	 * @category misc
    * @return mixed
    */
   function get_term_of_payment() {
@@ -397,6 +339,7 @@ class EconomicsWS {
     ))->TermOfPayment_GetDataArrayResult->TermOfPaymentData;
   }
   /**
+	 * @category misc
    * @return mixed
    */
   function get_templates() {
@@ -434,12 +377,13 @@ class EconomicsWS {
       }
       
     } catch (Exception $e) {
-      syslog(LOG_DEBUG, 'exception '. $e->getMessage() .' at line '. $e->getLine() .' SOAP request '. $this->client->__getLastRequest() .' SOAP response '. $this->client->__getLastResponse());
+      throw new Exception('Could not get employess '. $e->getMessage());
     }
     
     return $employees;
   }
   /**
+	 * @category employee
    * @return boolean
    */
   function create_employee ($params) {
@@ -469,7 +413,7 @@ class EconomicsWS {
       $employee = $this->client->Employee_FindByNumber(array('number' => $number));
       
     } catch (Exception $e) {
-      die($e->getMessage());
+      throw new Exception($e->getMessage());
     }
     
     return $employee;
