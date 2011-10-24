@@ -334,6 +334,7 @@ class EconomicsWS {
    */
   function get_term_of_payment() {
     $terms = $this->client->TermOfPayment_GetAll()->TermOfPayment_GetAllResult->TermOfPaymentHandle;
+
     return $this->client->TermOfPayment_GetDataArray(array(
       'entityHandles' => $terms
     ))->TermOfPayment_GetDataArrayResult->TermOfPaymentData;
