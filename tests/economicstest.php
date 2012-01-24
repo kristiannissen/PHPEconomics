@@ -15,30 +15,27 @@ require_once 'simpletest/autorun.php';
 
 require_once 'PHPEconomics/economics.v1.php';
 
-class EconomicsTest extends UnitTestCase
-{
+class EconomicsTest extends UnitTestCase {
 	function setUp() {}
 	
   function tearDown() {}
-	// SoapClient
-	function testSoapClient() {}
 	
 	function testDebtorNotFoundByName() {
 		$debtor = debtor_find_by_name('CompuGlobalHyperMegaNet');
-		
+		// We test that this customer does not exist
 		$this->assertTrue(is_null($debtor));
 	}
 
 	function testDebtorFindByName() {
 		$debtor = debtor_find_by_name('Expotium GmbH');
-
+		// We test that this customer does exist
 		$this->assertTrue(is_object($debtor));
 	}
 	
 	function testDebtorFindOnTwitter() {
 		$debtor = debtor_find_by_name('Expotium GmbH');
 		$twitter = debtor_uses_twitter($debtor);
-		
+
 		$this->assertTrue(is_array($twitter));
 	}
 	
@@ -51,25 +48,24 @@ class EconomicsTest extends UnitTestCase
 	
 	function testDebtorFindByNumber() {
 		$debtor = debtor_find_by_number(107);
-		
+		// We test that this customer exists
 		$this->assertTrue(is_object($debtor));
 	}
 	
 	function testDebtorNotFoundByNumber() {
 		$debtor = debtor_find_by_number(42);
-		
+		// We test that this customer does not exist
 		$this->assertTrue(is_null($debtor));
 	}
 
 	// Debtor_GetAll
   function testDebtorGetAll() {
 		$debtors = debtor_get_all();
-
+		// We test that we get an array in retur, check it's length
 		$this->assertTrue(is_array($debtors));
   }
 	// Debtor_GetData
 	function testDebtorGetInvoices() {
-		
 		$invoices = debtor_get_invoices(105);
 		
 		$this->assertTrue(is_array($invoices));
