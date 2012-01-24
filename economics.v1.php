@@ -236,5 +236,28 @@ function debtor_get_current_invoices($number = null) {
 	
 	return null;
 }
+/**
+ * Example
+ * if ($products == product_get_all()) {
+ * else {
+ * }
+ */
+function product_get_all() {
+	global $soap_client;
+	
+	$result = $soap_client->Product_GetAll();
+	
+	if (is_object($result) && property_exists($result, 'Product_GetAllResult')) {
+		$handles = $soap_client->Product_GetDataArray(array(
+			'entityHandles' => $result->Product_GetAllResult->ProductHandle
+		));
+		
+		if (is_object($handles) && property_exists($handles, 'Product_GetDataArrayResult')) {
+			return $handles->Product_GetDataArrayResult->ProductData;
+		}
+	}
+	
+	return null;
+}
 
 $soap_client = get_soap_connection();

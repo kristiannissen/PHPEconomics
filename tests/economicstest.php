@@ -7,11 +7,13 @@
  */
 ini_set('error_reporting', E_ALL);
 
+define('SIMPLETEST', 'simpletest_1.1.0');
+
 $path_to_simpletest = realpath(dirname(dirname(dirname(__FILE__))));
 
 set_include_path(join(PATH_SEPARATOR, array($path_to_simpletest, get_include_path())));
 
-require_once 'simpletest/autorun.php';
+require_once SIMPLETEST .'/autorun.php';
 
 require_once 'PHPEconomics/economics.v1.php';
 
@@ -79,7 +81,6 @@ class EconomicsTest extends UnitTestCase {
 	
 	// Debtor_GetData
 	function testDebtorGetCurrentInvoices() {
-		
 		$invoices = debtor_get_current_invoices(107);
 		
 		$this->assertTrue(is_array($invoices));
@@ -89,5 +90,11 @@ class EconomicsTest extends UnitTestCase {
 		$invoices = debtor_get_current_invoices(105);
 		
 		$this->assertTrue(is_null($invoices));
+	}
+	
+	function testProductGetAll() {
+		$products = product_get_all();
+		
+		$this->assertTrue(is_array($products));
 	}
 }

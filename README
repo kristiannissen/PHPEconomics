@@ -1,10 +1,3 @@
-"e-conomic is an Internet-based and innovative accounting system that exploits the opportunities of the Internet for flexible, user-friendly and individual solutions.
+In this new branch of my project I decided to move away from an OOP based solution and chose instead
+to focus on something more in the spirit of PHP - at least in my opinion.
 
-The system fulfils both the individual and the general requirements for a company's accounting and financial management – while at the same time making optimum use of the most recent technological possibilities.
-
-e-conomic constantly endeavours to develop, refine and adapt the accounting system to match the development of both technology and companies' needs – regardless of the company's size and industry."
-
-You can find more at http://www.e-conomic.co.uk/about/
-
-This is a PHP based implementation of e-conomic's SOAP based API, using this class you can add debtors to your account.
-The code has been build using PHPSpec, and you can find the current coverage at tests/DescribeDebtor.php
