@@ -237,8 +237,11 @@ function debtor_get_current_invoices($number = null) {
 	return null;
 }
 /**
- * Example
+ * Example:
  * if ($products == product_get_all()) {
+ * 	foreach ($products as $product) {
+ *		# Each product is an object
+ *	}
  * else {
  * }
  */
