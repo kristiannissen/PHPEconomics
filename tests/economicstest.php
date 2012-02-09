@@ -43,7 +43,7 @@ class EconomicsTest extends UnitTestCase {
 			'Debtor' => $debtor,
 		);
 		
-		debtor_update_data($params);
+		$debtor = debtor_update_data($params);
 		
 		$this->assertTrue($debtor->Country == 'Denmark');
 	}
