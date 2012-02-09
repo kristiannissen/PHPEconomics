@@ -59,6 +59,30 @@ function debtor_find_by_name($name = null) {
 	return null;
 }
 
+/**
+ * This function accepts an array containing the debtor data to be updated
+ * as well as a copy of the debtor to update
+ * TODO: Error handling
+ * https://www.e-conomic.com/secure/api1/EconomicWebservice.asmx?op=Debtor_UpdateFromData
+ */
+function debtor_update_data($params = array()) {
+	global $soap_client;
+	
+	$debtor = (array) $params['Debtor'];
+	
+	unset($params['Debtor']);
+	
+	$data = array_merge($debtor, $params);
+	
+	$number = $soap_client->Debtor_UpdateFromData(array(
+		'data' => $data
+	))->Debtor_UpdateFromDataResult;
+	
+	$debtor = debtor_find_by_number(intval($number->Number));
+	
+	return $debtor;
+}
+
 function debtor_geocode_address($debtor = null) {
 	global $soap_client;
 	

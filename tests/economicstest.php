@@ -34,6 +34,20 @@ class EconomicsTest extends UnitTestCase {
 		$this->assertTrue(is_object($debtor));
 	}
 	
+	function testDebtorUpdate() {
+		$debtor = debtor_find_by_name('Expotium GmbH');
+		// This params should resembel a form POST
+		$params = array(
+			'VatZone' => 'HomeCountry',
+			'Country' => 'Denmark',
+			'Debtor' => $debtor,
+		);
+		
+		debtor_update_data($params);
+		
+		$this->assertTrue($debtor->Country == 'Denmark');
+	}
+	
 	function testDebtorFindOnTwitter() {
 		$debtor = debtor_find_by_name('Expotium GmbH');
 		$twitter = debtor_uses_twitter($debtor);
@@ -79,7 +93,6 @@ class EconomicsTest extends UnitTestCase {
 		$this->assertTrue(is_null($invoices));
 	}
 	
-	// Debtor_GetData
 	function testDebtorGetCurrentInvoices() {
 		$invoices = debtor_get_current_invoices(107);
 		
