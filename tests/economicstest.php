@@ -27,7 +27,7 @@ class EconomicsTest extends UnitTestCase {
 		// We test that this customer does not exist
 		$this->assertTrue(is_null($debtor));
 	}
-
+	// FIXME: Can return array as well if multiple debtors share the same name
 	function testDebtorFindByName() {
 		$debtor = debtor_find_by_name('Expotium GmbH');
 		// We test that this customer does exist
@@ -48,17 +48,25 @@ class EconomicsTest extends UnitTestCase {
 		
 		$this->assertTrue($debtor->Country == 'Denmark');
 	}
-	
+
 	function testDebtorCreate() {
 		// This params should resembel a form POST
 		$params = array(
 			'name' => 'CompuGlobalHyperMegaNet',
-			'debtorGroupName' => 'Indenlandske'
+			'debtorgroupname' => 'Indenlandske',
+			'address' => '742 Evergreen Terrace',
+			'city' => 'Springfield',
+			'postalcode' => 2300,
+			'country' => 'Denmark',
+			'email' => 'chunkylover53@aol.com',
+			'website' => 'www.compuglobalhypermeganet.com'
 		);
 		
 		$debtor = debtor_create($params);
 		
-		$this->assertTrue($debtor->Name == 'CompuGlobalHyperMegaNet');
+		debtor_delete($params['name']);
+		
+		$this->assertTrue($debtor->Name == $params['name']);
 	}
 	
 	/*

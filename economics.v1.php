@@ -88,17 +88,17 @@ function debtor_create($params = array()) {
 	
 	$debtor = debtor_find_by_name($params['name']);
 	
-	if (is_object($debtor) && property_exists($debtor, 'Number')) {
-		trigger_error(sprintf('Debtor with name %s exists', $params['name']), E_USER_ERROR);
+	if (!is_null($debtor)) {
+		// trigger_error(sprintf('Debtor with name %s exists', $params['name']), E_USER_ERROR);
 	}
 	
-	$debtorgroup_handle = debtorgroup_find_by_name($params['debtorGroupName']);
+	$debtorgroup_handle = debtorgroup_find_by_name($params['debtorgroupname']);
 	
 	if (is_null($debtorgroup_handle)) {
-		trigger_error(sprintf('DebtorGroupName %s does not exist', $params['debtorGroupName']), E_USER_ERROR);
+		trigger_error(sprintf('DebtorGroupName %s does not exist', $params['debtorgroupname']), E_USER_ERROR);
 	}
 	// Remove the DebtorGroupName key since it's not accepted by the API
-	unset($params['DebtorGroupName']);
+	unset($params['debtorgroupname']);
 	
 	$number = $soap_client->Debtor_GetNextAvailableNumber()->Debtor_GetNextAvailableNumberResult;
 	
@@ -112,11 +112,87 @@ function debtor_create($params = array()) {
 		$result = $soap_client->Debtor_Create($debtor);
 		
 		if (is_object($result) && property_exists($result, 'Debtor_CreateResult')) {
+			if (array_key_exists('address', $debtor)) {
+				$soap_client->Debtor_SetAddress(array(
+					'debtorHandle' => (object) array(
+						'Number' => intval($result->Debtor_CreateResult->Number)
+					),
+					'value' => $debtor['address']
+				));
+			}
+			
+			if (array_key_exists('city', $debtor)) {
+				$soap_client->Debtor_SetCity(array(
+					'debtorHandle' => (object) array(
+						'Number' => intval($result->Debtor_CreateResult->Number)
+					),
+					'value' => $debtor['city']
+				));
+			}
+			
+			if (array_key_exists('country', $debtor)) {
+				$soap_client->Debtor_SetCountry(array(
+					'debtorHandle' => (object) array(
+						'Number' => intval($result->Debtor_CreateResult->Number)
+					),
+					'value' => $debtor['country']
+				));
+			}
+			
+			if (array_key_exists('postalcode', $debtor)) {
+				$soap_client->Debtor_SetPostalCode(array(
+					'debtorHandle' => (object) array(
+						'Number' => intval($result->Debtor_CreateResult->Number)
+					),
+					'value' => $debtor['postalcode']
+				));
+			}
+			
+			if (array_key_exists('email', $debtor)) {
+				$soap_client->Debtor_SetEmail(array(
+					'debtorHandle' => (object) array(
+						'Number' => intval($result->Debtor_CreateResult->Number)
+					),
+					'value' => $debtor['email']
+				));
+			}
+			
+			if (array_key_exists('website', $debtor)) {
+				$soap_client->Debtor_SetWebsite(array(
+					'debtorHandle' => (object) array(
+						'Number' => intval($result->Debtor_CreateResult->Number)
+					),
+					'value' => $debtor['website']
+				));
+			}
+			
 			return debtor_find_by_number(intval($number));
 		}
 	}
 	
 	return null;
+}
+
+function debtor_delete($name = null) {
+	global $soap_client;
+	
+	$debtor = debtor_find_by_name($name);
+
+	if (is_array($debtor)) {
+		$debtor = array_shift($debtor);
+	}
+
+	$result = $soap_client->Debtor_Delete(array(
+		'debtorHandle' => (object) array(
+			'Number' => intval($debtor->Number)
+		)
+	));
+	
+	if (property_exists($result, 'Number')) {
+		return false;
+	}
+	
+	return true;
 }
 
 function debtor_geocode_address($debtor = null) {
