@@ -23,7 +23,7 @@ class EconomicsTest extends UnitTestCase {
   function tearDown() {}
 	
 	function testDebtorNotFoundByName() {
-		$debtor = debtor_find_by_name('CompuGlobalHyperMegaNet');
+		$debtor = debtor_find_by_name(sprintf('CompuGlobalHyperMegaNet-%s', uniqid()));
 		// We test that this customer does not exist
 		$this->assertTrue(is_null($debtor));
 	}
@@ -34,6 +34,7 @@ class EconomicsTest extends UnitTestCase {
 		$this->assertTrue(is_object($debtor));
 	}
 	
+	// Debtor_UpdateFromData()
 	function testDebtorUpdate() {
 		$debtor = debtor_find_by_name('Expotium GmbH');
 		// This params should resembel a form POST
@@ -48,6 +49,19 @@ class EconomicsTest extends UnitTestCase {
 		$this->assertTrue($debtor->Country == 'Denmark');
 	}
 	
+	function testDebtorCreate() {
+		// This params should resembel a form POST
+		$params = array(
+			'name' => 'CompuGlobalHyperMegaNet',
+			'debtorGroupName' => 'Indenlandske'
+		);
+		
+		$debtor = debtor_create($params);
+		
+		$this->assertTrue($debtor->Name == 'CompuGlobalHyperMegaNet');
+	}
+	
+	/*
 	function testDebtorFindOnTwitter() {
 		$debtor = debtor_find_by_name('Expotium GmbH');
 		$twitter = debtor_uses_twitter($debtor);
@@ -61,6 +75,7 @@ class EconomicsTest extends UnitTestCase {
 		
 		$this->assertTrue(is_array($geocode));
 	}
+	*/
 	
 	function testDebtorFindByNumber() {
 		$debtor = debtor_find_by_number(107);
@@ -109,5 +124,41 @@ class EconomicsTest extends UnitTestCase {
 		$products = product_get_all();
 		
 		$this->assertTrue(is_array($products));
+	}
+	
+	function testTemplateCollectionGetAll() {
+		$templatecollection = templatecollection_get_all();
+
+		$this->assertTrue(is_array($templatecollection));
+	}
+	
+	function testTemplateCollectionFindByName() {
+		$templatecollection = templatecollection_find_by_name('DK. std. m. bankoplys 1.4');
+
+		$this->assertTrue(is_object($templatecollection));
+	}
+	
+	function testTemplateCollectionNotFoundByName() {
+		$templatecollection = templatecollection_find_by_name('Does not exist');
+		
+		$this->assertTrue(is_null($templatecollection));
+	}
+	
+	function testDebtorGroupGetAll() {
+		$debtorgroups = debtorgroup_get_all();
+		
+		$this->assertTrue(is_array($debtorgroups));
+	}
+	
+	function testDebtorGroupFindByName() {
+		$debtorgroup = debtorgroup_find_by_name('Indenlandske');
+		
+		$this->assertTrue(is_object($debtorgroup));
+	}
+	
+	function testDebtorGroupNotFindByName() {
+		$debtorgroup = debtorgroup_find_by_name('Does not exist');
+		
+		$this->assertTrue(is_null($debtorgroup));
 	}
 }

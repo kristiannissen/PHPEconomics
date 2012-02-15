@@ -48,7 +48,7 @@ function debtor_find_by_name($name = null) {
 		if (property_exists($result->Debtor_FindByNameResult, 'DebtorHandle')) {
 			$handle = $result->Debtor_FindByNameResult->DebtorHandle;
 			
-			if (function_exists('debtor_find_by_number')) {
+			if (is_object($handle) && property_exists($handle, 'Number')) {				
 				return debtor_find_by_number(intval($handle->Number));
 			}
 			
@@ -81,6 +81,42 @@ function debtor_update_data($params = array()) {
 	$debtor = debtor_find_by_number(intval($number->Number));
 	
 	return $debtor;
+}
+
+function debtor_create($params = array()) {
+	global $soap_client;
+	
+	$debtor = debtor_find_by_name($params['name']);
+	
+	if (is_object($debtor) && property_exists($debtor, 'Number')) {
+		trigger_error(sprintf('Debtor with name %s exists', $params['name']), E_USER_ERROR);
+	}
+	
+	$debtorgroup_handle = debtorgroup_find_by_name($params['debtorGroupName']);
+	
+	if (is_null($debtorgroup_handle)) {
+		trigger_error(sprintf('DebtorGroupName %s does not exist', $params['debtorGroupName']), E_USER_ERROR);
+	}
+	// Remove the DebtorGroupName key since it's not accepted by the API
+	unset($params['DebtorGroupName']);
+	
+	$number = $soap_client->Debtor_GetNextAvailableNumber()->Debtor_GetNextAvailableNumberResult;
+	
+	$debtor = array_merge(array(
+		'vatZone' => 'HomeCountry',
+		'number' => $number,
+		'debtorGroupHandle' => $debtorgroup_handle->Handle,
+	), $params);
+	
+	if (is_int($number)) {
+		$result = $soap_client->Debtor_Create($debtor);
+		
+		if (is_object($result) && property_exists($result, 'Debtor_CreateResult')) {
+			return debtor_find_by_number(intval($number));
+		}
+	}
+	
+	return null;
 }
 
 function debtor_geocode_address($debtor = null) {
@@ -265,8 +301,7 @@ function debtor_get_current_invoices($number = null) {
  * if ($products == product_get_all()) {
  * 	foreach ($products as $product) {
  *		# Each product is an object
- *	}
- * else {
+ * } else {
  * }
  */
 function product_get_all() {
@@ -281,6 +316,114 @@ function product_get_all() {
 		
 		if (is_object($handles) && property_exists($handles, 'Product_GetDataArrayResult')) {
 			return $handles->Product_GetDataArrayResult->ProductData;
+		}
+	}
+	
+	return null;
+}
+
+/**
+ * TemplateCollection_GetDataArray
+ */
+function templatecollection_get_all() {
+	global $soap_client;
+	
+	$result = $soap_client->TemplateCollection_GetAll();
+	
+	if (is_object($result) && property_exists($result, 'TemplateCollection_GetAllResult')) {
+		$entity_handles = $result->TemplateCollection_GetAllResult->TemplateCollectionHandle;
+		
+		if (is_array($entity_handles)) {
+			$collection_data = $soap_client->TemplateCollection_GetDataArray(array(
+				'entityHandles' => $entity_handles
+			));
+			
+			if (is_object($collection_data) && property_exists($collection_data, 'TemplateCollection_GetDataArrayResult')) {
+				return $collection_data->TemplateCollection_GetDataArrayResult->TemplateCollectionData;
+			}
+		}
+	}
+	
+	return null;
+}
+
+/**
+ * 
+ */
+function templatecollection_find_by_name($name = null) {
+	global $soap_client;
+	
+	if (is_null($name)) {
+		trigger_error('templatecollection_find_by_name($name) takes exactly one parameter, none passed', E_USER_ERROR);
+	}
+	
+	$result = $soap_client->TemplateCollection_FindByName(array(
+		'name' => $name
+	));
+	
+	if (is_object($result) && property_exists($result, 'TemplateCollection_FindByNameResult')) {
+		$handle = $result->TemplateCollection_FindByNameResult;
+
+		if (is_object($handle) && property_exists($handle, 'TemplateCollectionHandle')) {
+			if (property_exists($handle->TemplateCollectionHandle, 'Id')) {
+				$result = $soap_client->TemplateCollection_GetData(array(
+					'entityHandle' => $handle->TemplateCollectionHandle
+				));
+
+				return $result->TemplateCollection_GetDataResult;
+			}
+		}
+	}
+	
+	return null;
+}
+
+/**
+ * 
+ */
+function debtorgroup_get_all() {
+	global $soap_client;
+	
+	$result = $soap_client->DebtorGroup_GetAll();
+	
+	if (is_object($result) && property_exists($result, 'DebtorGroup_GetAllResult')) {
+		$handles = $result->DebtorGroup_GetAllResult;
+		
+		if (is_object($handles) && property_exists($handles, 'DebtorGroupHandle')) {
+			$result = $soap_client->DebtorGroup_GetDataArray(array(
+				'entityHandles' => $handles->DebtorGroupHandle
+			));
+			
+			if (is_object($result) && property_exists($result, 'DebtorGroup_GetDataArrayResult')) {
+				return $result->DebtorGroup_GetDataArrayResult->DebtorGroupData;
+			}
+		}
+	}
+	
+	return null;
+}
+
+/**
+ *
+ */
+function debtorgroup_find_by_name($name = null) {
+	global $soap_client;
+	
+	$result = $soap_client->DebtorGroup_FindByName(array(
+		'name' => $name
+	));
+	
+	if (is_object($result) && property_exists($result, 'DebtorGroup_FindByNameResult')) {
+		$handle = $result->DebtorGroup_FindByNameResult;
+		
+		if (is_object($handle) && property_exists($handle, 'DebtorGroupHandle')) {
+			$result = $soap_client->DebtorGroup_GetData(array(
+				'entityHandle' => $handle->DebtorGroupHandle
+			));
+			
+			if (is_object($result) && property_exists($result, 'DebtorGroup_GetDataResult')) {
+				return $result->DebtorGroup_GetDataResult;
+			}
 		}
 	}
 	
