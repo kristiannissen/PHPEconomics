@@ -89,7 +89,7 @@ function debtor_create($params = array()) {
 	$debtor = debtor_find_by_name($params['name']);
 	
 	if (!is_null($debtor)) {
-		// trigger_error(sprintf('Debtor with name %s exists', $params['name']), E_USER_ERROR);
+		trigger_error(sprintf('Debtor with name %s exists', $params['name']), E_USER_ERROR);
 	}
 	
 	$debtorgroup_handle = debtorgroup_find_by_name($params['debtorgroupname']);
