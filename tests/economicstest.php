@@ -23,40 +23,41 @@ class EconomicsTest extends UnitTestCase {
   function tearDown() {}
 	
 	function testDebtorNotFoundByName() {
-		$debtor = debtor_find_by_name(sprintf('CompuGlobalHyperMegaNet-%s', uniqid()));
+		// In order to test that a debtor does not exist, a random ID is added to the name
+    $debtor = debtor_find_by_name(sprintf('CompuGlobalHyperMegaNet-%s', uniqid()));
 		// We test that this customer does not exist
 		$this->assertTrue(is_null($debtor));
 	}
-	// FIXME: Can return array as well if multiple debtors share the same name
-	function testDebtorFindMultipleByName() {
-		$debtors = debtor_find_by_name('CompuGlobalHyperMegaNet');
-		// We test that this customer does exist
-    
-    $this->assertTrue(is_object($debtors));
-	}
-
+	
 	function testDebtorFindSingleByName() {
-		$debtors = debtor_find_by_name('Expotium GmbH');
+		$debtor = debtor_find_by_name('Expotium GmbH');
 		// We test that this customer does exist
-		$this->assertTrue(count($debtors) == 1);
+		$this->assertTrue(count($debtor) == 1);
 	}
 
-	// Debtor_UpdateFromData()
-	/* FIXME: Refactor this functions arguments
-	function testDebtorUpdate() {
+  function testDebtorUpdate() {
+    // Create a random dataset
+    $countries = array(
+      'Denmark',
+      'Norway',
+      'Sweden',
+    );
+    // Pick a random country from the dataset
+    $test_value = $countries[rand(0, count($countries))];
+
 		$debtor = debtor_find_by_name('Expotium GmbH');
 		// This params should resembel a form POST
 		$params = array(
 			'VatZone' => 'HomeCountry',
-			'Country' => 'Denmark',
+			'Country' => $test_value,
 			'Debtor' => $debtor,
 		);
 		
 		$debtor = debtor_update_data($params);
 		
-		$this->assertTrue($debtor->Country == 'Denmark');
+		$this->assertTrue($debtor->Country == $test_value);
 	}
-	*/
+	
 
 	function testDebtorCreate() {
 		// This params should resembel a form POST
@@ -72,15 +73,21 @@ class EconomicsTest extends UnitTestCase {
 		);
 
 		if ($debtor = debtor_find_by_name($params['name'])) {
+      // This part is entirely for housekeeping
       if (is_object($debtor)) {
         // Delete old entry
         debtor_delete($debtor->Name);
-        // Create new entry
-        $debtor = debtor_create($params);
-        // Test that debtors name is identical to name in params
-        $this->assertTrue($debtor->Name == $params['name']);
+      }
+      if (is_array($debtor)) {
+        foreach ($debtor as $d) {
+          debtor_delete($d->Name);
+        }
       }
 	  }
+    // Create deptor based on params
+    $debtor = debtor_create($params);
+    
+    $this->assertTrue($debtor->Name == $params['name']);
   }
 	
 	/*
