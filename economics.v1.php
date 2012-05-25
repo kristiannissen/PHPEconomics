@@ -27,7 +27,7 @@ function get_soap_connection() {
 
 /**
  * Example:
- * if ($debtor == debtor_find_by_name('CompuGlobalHyperMegaNet')) {
+ * if ($debtor = debtor_find_by_name('CompuGlobalHyperMegaNet')) {
  *	# Do something with debtor
  * } else {
  *	# No debtor found by that name
@@ -46,13 +46,21 @@ function debtor_find_by_name($name = null) {
 	
 	if (is_object($result) && property_exists($result, 'Debtor_FindByNameResult')) {
 		if (property_exists($result->Debtor_FindByNameResult, 'DebtorHandle')) {
+			$debtor_handles = array();
+			
 			$handle = $result->Debtor_FindByNameResult->DebtorHandle;
 			
-			if (is_object($handle) && property_exists($handle, 'Number')) {				
-				return debtor_find_by_number(intval($handle->Number));
+			if (is_object($handle)) {
+				array_push($debtor_handles, $handle);
+			} else {
+				$debtor_handles = $handle;
 			}
 			
-			return $handle;
+			$result = $soap_client->Debtor_GetDataArray(array(
+				'entityHandles' => $debtor_handles
+			));
+			
+			return $result->Debtor_GetDataArrayResult->DebtorData;
 		}
 	}
 	
@@ -112,6 +120,13 @@ function debtor_create($params = array()) {
 		$result = $soap_client->Debtor_Create($debtor);
 		
 		if (is_object($result) && property_exists($result, 'Debtor_CreateResult')) {
+			$soap_client->Debtor_SetIsAccessible(array(
+				'debtorHandle' => (object) array(
+					'Number' => intval($result->Debtor_CreateResult->Number)
+				),
+				'value' => true
+			));
+			
 			if (array_key_exists('address', $debtor)) {
 				$soap_client->Debtor_SetAddress(array(
 					'debtorHandle' => (object) array(
