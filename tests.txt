@@ -1,3 +1,0 @@
-economicstest.php
-OK
-Test cases run: 1/1, Passes: 18, Failures: 0, Exceptions: 0
