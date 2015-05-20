@@ -1,2 +1,4 @@
 In this new branch of my project I decided to move away from an OOP based solution and chose instead to focus on something more in the spirit of PHP - at least in my opinion.
 
+## Moving to composer based package
+After several years of no commits, I decided to move to a composer based library instead. It's located here https://github.com/kristiannissen/phpecosrv
