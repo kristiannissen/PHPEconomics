@@ -1,2 +1,6 @@
 .tmproj
 *.swp
+*/bin
+.c9
+composer-setup
+composer.phar
